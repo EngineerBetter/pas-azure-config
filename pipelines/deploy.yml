@@ -1,0 +1,496 @@
+interpolate-creds: &interpolate-creds
+  do:
+  - in_parallel:
+    - get: texplate-binary
+      params:
+        globs:
+        - texplate_linux_amd64
+    - get: jq-binary
+      params:
+        globs:
+        - jq-linux64
+  - task: tfstate-interpolate
+    image: platform-automation-image
+    file: tasks-repo/tasks/tfstate-interpolate/task.yml
+    input_mapping:
+      tf_state: terraform-infra
+      tasks: tasks-repo
+      texplate: texplate-binary
+      jq: jq-binary
+      files: configuration-repo
+    output_mapping:
+      interpolated-files: interpolated-tf-files
+    params:
+      INTERPOLATION_PATHS: config/
+  - task: credhub-interpolate
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/credhub-interpolate.yml
+    params:
+      CREDHUB_CLIENT: credhub_admin
+      CREDHUB_SECRET: ((credhub-secret))
+      CREDHUB_SERVER: ((credhub-server))
+      CREDHUB_CA_CERT: ((credhub-ca-cert))
+      PREFIX: '/((resource_group))'
+      SKIP_MISSING: true
+    input_mapping:
+      files: interpolated-tf-files
+    output_mapping:
+      interpolated-files: interpolated-creds
+  - task: merge-files
+    image: platform-automation-image
+    file: tasks-repo/tasks/merge-files/task.yml
+    input_mapping:
+      files: configuration-repo
+
+put-state: &put-state
+  do:
+  - put: state
+    params:
+      file: generated-state/state-pks-*.yml
+
+resource_types:
+- name: azure-blobstore
+  type: docker-image
+  source:
+    repository: pcfabr/azure-blobstore-resource
+
+- name: pivnet
+  type: docker-image
+  source:
+    repository: pivotalcf/pivnet-resource
+    tag: latest-final
+
+- name: terraform
+  type: docker-image
+  source:
+    repository: ljfranklin/terraform-resource
+    tag: 0.11.14
+
+resources:
+# Git repos
+- name: configuration-repo
+  type: git
+  source:
+    private_key: ((github_private_key))
+    uri: git@github.com:crsimmons/pks-azure-config.git
+    branch: master
+
+- name: tasks-repo
+  type: git
+  source:
+    private_key: ((github_private_key))
+    uri: git@github.com:crsimmons/pks-azure.git
+    branch: master
+    paths:
+    - tasks
+
+# Terraform source
+- name: terraforming-azure-tarball
+  type: github-release
+  source:
+    owner: pivotal-cf
+    repository: terraforming-azure
+    access_token: ((github_access_token))
+
+# Binaries
+- name: texplate-binary
+  type: github-release
+  source:
+    owner: pivotal-cf
+    repository: texplate
+    access_token: ((github_access_token))
+
+- name: jq-binary
+  type: github-release
+  source:
+    owner: stedolan
+    repository: jq
+    access_token: ((github_access_token))
+
+# Terraform
+- name: terraform-infra
+  type: terraform
+  source:
+    env_name: pks
+    backend_type: azurerm
+    backend_config:
+      storage_account_name: ((storage_account_name))
+      container_name: resources
+      key: terraform.tfstate
+      access_key: ((storage_account_key))
+
+# State
+- name: installation
+  type: azure-blobstore
+  source:
+    storage_account_name: ((storage_account_name))
+    storage_account_key: ((storage_account_key))
+    container: resources
+    regexp: pks-installation-(.*).zip
+
+- name: state
+  type: azure-blobstore
+  source:
+    storage_account_name: ((storage_account_name))
+    storage_account_key: ((storage_account_key))
+    container: resources
+    regexp: state-pks-(.*).yml
+
+# Azure blobstore blobs
+- name: platform-automation-tasks
+  type: azure-blobstore
+  source:
+    <<: &azure-params
+      storage_account_name: ((storage_account_name))
+      storage_account_key: ((storage_account_key))
+      container: pivnet
+    regexp: platform-automation-tasks-(.*).zip
+
+- name: platform-automation-image
+  type: azure-blobstore
+  source:
+    <<: *azure-params
+    regexp: platform-automation-image-(.*).tgz
+
+- name: opsman-product
+  type: azure-blobstore
+  source:
+    <<: *azure-params
+    regexp: ops-manager-azure-(.*).yml
+
+- name: pks-product
+  type: azure-blobstore
+  source:
+    <<: *azure-params
+    regexp: pivotal-container-service-(.*).pivotal
+
+- name: pks-stemcell
+  type: azure-blobstore
+  source:
+    <<: *azure-params
+    regexp: pks-stemcells/bosh-stemcell-(.*)-azure-hyperv-ubuntu-xenial-go_agent.tgz
+
+# Triggers
+- name: one-time-trigger
+  type: time
+  source:
+    interval: 999999h
+
+- name: daily-trigger
+  type: time
+  source:
+    interval: 24h
+
+jobs:
+- name: terraform-infra
+  serial: true
+  serial_groups:
+  - install
+  plan:
+  - in_parallel:
+    - get: terraforming-azure-tarball
+    - get: platform-automation-image
+      params:
+        unpack: true
+    - get: configuration-repo
+      trigger: true
+  - task: extract-tf-files
+    image: platform-automation-image
+    config:
+      platform: linux
+      inputs:
+      - name: terraforming-azure-tarball
+      - name: configuration-repo
+      outputs:
+      - name: terraforming-azure
+      run:
+        path: bash
+        args:
+        - -euc
+        - |
+          version=$(cat terraforming-azure-tarball/version)
+          tar xzf terraforming-azure-tarball/"terraforming-azure-v${version}.tar.gz" -C terraforming-azure
+          cp configuration-repo/terraform/* terraforming-azure/terraforming/terraforming-pks/
+  - put: terraform-infra
+    params:
+      terraform_source: terraforming-azure/terraforming/terraforming-pks
+      vars:
+        subscription_id: ((subscription_id))
+        tenant_id: ((tenant_id))
+        client_id: ((client_id))
+        client_secret: ((client_secret))
+        env_name: ((resource_group))
+        location: ((location))
+        dns_suffix: ((dns_suffix))
+        domains: ["*.((resource_group)).((dns_suffix))"]
+        ops_manager_image_uri: ""
+
+- name: install-opsman
+  serial: true
+  serial_groups:
+  - install
+  plan:
+  - in_parallel:
+    - get: one-time-trigger
+      trigger: true
+    - get: platform-automation-image
+      params:
+        unpack: true
+    - get: platform-automation-tasks
+      params:
+        unpack: true
+    - get: opsman-product
+      trigger: true
+    - get: configuration-repo
+      trigger: true
+      passed:
+      - terraform-infra
+    - get: tasks-repo
+      trigger: true
+    - get: state
+    - get: terraform-infra
+      passed:
+      - terraform-infra
+      params:
+        output_statefile: true
+  - <<: *interpolate-creds
+  - task: create-vm
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/create-vm.yml
+    input_mapping:
+      image: opsman-product
+      config: interpolated-files
+    params:
+      STATE_FILE: state-pks-$timestamp.yml
+    ensure: *put-state
+  - task: configure-authentication
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/configure-authentication.yml
+    attempts: 10
+    input_mapping:
+      env: interpolated-files
+      config: interpolated-files
+  - task: configure-director
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/configure-director.yml
+    input_mapping:
+      config: interpolated-files
+      env: interpolated-files
+  - task: apply-director-changes
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/apply-director-changes.yml
+    input_mapping:
+      env: interpolated-files
+
+- name: export-installation
+  serial: true
+  plan:
+  - in_parallel:
+    - get: daily-trigger
+      trigger: true
+    - get: state
+      passed:
+      - install-opsman
+    - get: platform-automation-image
+      params:
+        unpack: true
+    - get: platform-automation-tasks
+      params:
+        unpack: true
+    - get: configuration-repo
+      trigger: true
+      passed:
+      - terraform-infra
+    - get: tasks-repo
+      trigger: true
+    - get: terraform-infra
+      passed:
+      - terraform-infra
+      params:
+        output_statefile: true
+    - get: one-time-trigger
+      trigger: true
+      passed:
+      - install-opsman
+  - <<: *interpolate-creds
+  - task: export-installation
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/export-installation.yml
+    input_mapping:
+      env: interpolated-files
+    params:
+      INSTALLATION_FILE: pks-installation-$timestamp.zip
+  - put: installation
+    params:
+      file: installation/pks-installation*.zip
+
+- name: upgrade-opsman
+  serial: true
+  serial_groups:
+  - install
+  plan:
+  - in_parallel:
+    - get: platform-automation-image
+      params:
+        unpack: true
+    - get: platform-automation-tasks
+      params:
+        unpack: true
+    - get: installation
+      passed:
+      - export-installation
+    - get: configuration-repo
+      trigger: true
+      passed:
+      - export-installation
+    - get: tasks-repo
+      trigger: true
+      passed:
+      - export-installation
+    - get: state
+    - get: opsman-product
+    - get: terraform-infra
+      passed:
+      - export-installation
+      params:
+        output_statefile: true
+    - get: one-time-trigger
+      trigger: true
+      passed:
+      - export-installation
+  - <<: *interpolate-creds
+  - task: upgrade-opsman
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upgrade-opsman.yml
+    input_mapping:
+      image: opsman-product
+      config: interpolated-files
+      env: interpolated-files
+    params:
+      STATE_FILE: state-pks-$timestamp.yml
+      INSTALLATION_FILE: pks-installation*.zip
+    ensure: *put-state
+  - task: configure-director
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/configure-director.yml
+    input_mapping:
+      config: interpolated-files
+      env: interpolated-files
+  - task: apply-director-changes
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/apply-director-changes.yml
+    input_mapping:
+      env: interpolated-files
+
+- name: upload-and-stage-pks
+  serial: true
+  serial_groups:
+  - install
+  plan:
+  - in_parallel:
+    - get: platform-automation-image
+      params:
+        unpack: true
+    - get: platform-automation-tasks
+      params:
+        unpack: true
+    - get: configuration-repo
+      trigger: true
+      passed:
+      - upgrade-opsman
+    - get: tasks-repo
+      trigger: true
+      passed:
+      - upgrade-opsman
+    - get: pks-product
+      trigger: true
+    - get: pks-stemcell
+      trigger: true
+    - get: terraform-infra
+      passed:
+      - upgrade-opsman
+      params:
+        output_statefile: true
+    - get: one-time-trigger
+      trigger: true
+      passed:
+      - upgrade-opsman
+  - <<: *interpolate-creds
+  - task: upload-and-stage-product
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upload-and-stage-product.yml
+    input_mapping:
+      product: pks-product
+      env: interpolated-files
+  - task: upload-pks-stemcell
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upload-stemcell.yml
+    input_mapping:
+      env: interpolated-files
+      stemcell: pks-stemcell
+
+- name: configure-pks
+  serial: true
+  serial_groups:
+  - install
+  plan:
+  - in_parallel:
+    - get: platform-automation-image
+      params:
+        unpack: true
+    - get: platform-automation-tasks
+      resource: platform-automation
+      params:
+        unpack: true
+    - get: configuration-repo
+      trigger: true
+      passed:
+      - upload-and-stage-pks
+    - get: terraform-infra
+      passed:
+      - upload-and-stage-pks
+      params:
+        output_statefile: true
+    - get: one-time-trigger
+      trigger: true
+      passed:
+      - upload-and-stage-pks
+  - <<: *interpolate-creds
+  - task: configure-pks
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/configure-product.yml
+    input_mapping:
+      config: interpolated-files
+      env: interpolated-files
+
+- name: apply-product-changes
+  serial: true
+  serial_groups:
+  - install
+  plan:
+  - in_parallel:
+    - get: platform-automation-image
+      params:
+        unpack: true
+    - get: platform-automation-tasks
+      params:
+        unpack: true
+    - get: configuration-repo
+      trigger: true
+      passed:
+      - configure-pks
+    - get: terraform-infra
+      passed:
+      - configure-pks
+      params:
+        output_statefile: true
+    - get: one-time-trigger
+      trigger: true
+      passed:
+      - configure-pks
+  - <<: *interpolate-creds
+  - task: apply-product-changes
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/apply-changes.yml
+    input_mapping:
+      env: interpolated-files

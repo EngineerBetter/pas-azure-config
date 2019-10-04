@@ -1,0 +1,32 @@
+---
+opsman-configuration:
+  azure:
+    subscription_id: {{.subscription_id}}
+    tenant_id: {{.tenant_id}}
+    client_id: {{.client_id}}
+    client_secret: {{.client_secret}}
+    resource_group: {{.pcf_resource_group_name}}
+    location: {{.location}}
+    container: opsmanagerimage
+    network_security_group: {{.ops_manager_security_group_name}}
+
+    # Note that there are several environment-specific details in this path
+    vpc_subnet: /subscriptions/{{.subscription_id}}/resourceGroups/{{.pcf_resource_group_name}}/providers/Microsoft.Network/virtualNetworks/{{.network_name}}/subnets/{{.infrastructure_subnet_name}}
+
+    storage_account: {{.ops_manager_storage_account}}
+
+    ssh_public_key: {{.ops_manager_ssh_public_key}}
+    vm_name: ops-manager-vm                       # default: Ops Manager-vm
+    boot_disk_size: 100                           # default: 200
+    cloud_name: AzureCloud                        # default: AzureCloud
+
+    # This flag is only respected by the create-vm & upgrade-opsman commands
+    # set to true if you want to create the new opsman vm with unmanaged disk
+    # delete-vm discovers the disk type from the VM
+    use_unmanaged_disk: false
+
+    # At least one IP address (public or private)
+    # needs to be assigned to the VM.
+    # It is also permissable to assign both.
+    public_ip: {{.ops_manager_public_ip}}
+    private_ip: {{.ops_manager_private_ip}}
