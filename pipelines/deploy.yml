@@ -44,7 +44,7 @@ interpolate-creds: &interpolate-creds
 
 put-state: &put-state
   do:
-  - put: state
+  - put: opsman-state
     params:
       file: generated-state/state-pks-*.yml
 
@@ -73,7 +73,7 @@ resources:
   source:
     private_key: ((github_private_key))
     uri: git@github.com:crsimmons/pks-azure-config.git
-    branch: master
+    branch: ((configuration-branch))
 
 - name: tasks-repo
   type: git
@@ -128,7 +128,7 @@ resources:
     container: resources
     regexp: pks-installation-(.*).zip
 
-- name: state
+- name: opsman-state
   type: azure-blobstore
   source:
     storage_account_name: ((storage_account_name))
@@ -239,20 +239,17 @@ jobs:
     - get: platform-automation-tasks
       params:
         unpack: true
-    - get: opsman-product
-      trigger: true
-    - get: configuration-repo
-      trigger: true
-      passed:
-      - terraform-infra
-    - get: tasks-repo
-      trigger: true
-    - get: state
     - get: terraform-infra
       passed:
       - terraform-infra
       params:
         output_statefile: true
+    - get: configuration-repo
+      passed:
+      - terraform-infra
+    - get: tasks-repo
+    - get: opsman-state
+    - get: opsman-product
   - <<: *interpolate-creds
   - task: create-vm
     image: platform-automation-image
@@ -286,32 +283,34 @@ jobs:
   serial: true
   plan:
   - in_parallel:
-    - get: daily-trigger
+    - get: one-time-trigger
       trigger: true
-    - get: state
       passed:
       - install-opsman
+    - get: daily-trigger
+      trigger: true
     - get: platform-automation-image
       params:
         unpack: true
     - get: platform-automation-tasks
       params:
         unpack: true
+    - get: terraform-infra
+      passed:
+      - terraform-infra
+      params:
+        output_statefile: true
     - get: configuration-repo
       trigger: true
       passed:
       - terraform-infra
     - get: tasks-repo
       trigger: true
-    - get: terraform-infra
-      passed:
-      - terraform-infra
-      params:
-        output_statefile: true
-    - get: one-time-trigger
-      trigger: true
+    - get: opsman-state
       passed:
       - install-opsman
+    - get: opsman-product
+      trigger: true
   - <<: *interpolate-creds
   - task: export-installation
     image: platform-automation-image
@@ -330,15 +329,21 @@ jobs:
   - install
   plan:
   - in_parallel:
+    - get: one-time-trigger
+      trigger: true
+      passed:
+      - export-installation
     - get: platform-automation-image
       params:
         unpack: true
     - get: platform-automation-tasks
       params:
         unpack: true
-    - get: installation
+    - get: terraform-infra
       passed:
       - export-installation
+      params:
+        output_statefile: true
     - get: configuration-repo
       trigger: true
       passed:
@@ -347,14 +352,11 @@ jobs:
       trigger: true
       passed:
       - export-installation
-    - get: state
-    - get: opsman-product
-    - get: terraform-infra
+    - get: installation
       passed:
       - export-installation
-      params:
-        output_statefile: true
-    - get: one-time-trigger
+    - get: opsman-state
+    - get: opsman-product
       trigger: true
       passed:
       - export-installation
@@ -388,12 +390,21 @@ jobs:
   - install
   plan:
   - in_parallel:
+    - get: one-time-trigger
+      trigger: true
+      passed:
+      - upgrade-opsman
     - get: platform-automation-image
       params:
         unpack: true
     - get: platform-automation-tasks
       params:
         unpack: true
+    - get: terraform-infra
+      passed:
+      - upgrade-opsman
+      params:
+        output_statefile: true
     - get: configuration-repo
       trigger: true
       passed:
@@ -406,12 +417,7 @@ jobs:
       trigger: true
     - get: pks-stemcell
       trigger: true
-    - get: terraform-infra
-      passed:
-      - upgrade-opsman
-      params:
-        output_statefile: true
-    - get: one-time-trigger
+    - get: opsman-product
       trigger: true
       passed:
       - upgrade-opsman
@@ -435,23 +441,38 @@ jobs:
   - install
   plan:
   - in_parallel:
+    - get: one-time-trigger
+      trigger: true
+      passed:
+      - upload-and-stage-pks
     - get: platform-automation-image
       params:
         unpack: true
     - get: platform-automation-tasks
-      resource: platform-automation
       params:
         unpack: true
-    - get: configuration-repo
-      trigger: true
-      passed:
-      - upload-and-stage-pks
     - get: terraform-infra
       passed:
       - upload-and-stage-pks
       params:
         output_statefile: true
-    - get: one-time-trigger
+    - get: configuration-repo
+      trigger: true
+      passed:
+      - upload-and-stage-pks
+    - get: tasks-repo
+      trigger: true
+      passed:
+      - upload-and-stage-pks
+    - get: pks-product
+      trigger: true
+      passed:
+      - upload-and-stage-pks
+    - get: pks-stemcell
+      trigger: true
+      passed:
+      - upload-and-stage-pks
+    - get: opsman-product
       trigger: true
       passed:
       - upload-and-stage-pks
@@ -469,22 +490,38 @@ jobs:
   - install
   plan:
   - in_parallel:
+    - get: one-time-trigger
+      trigger: true
+      passed:
+      - configure-pks
     - get: platform-automation-image
       params:
         unpack: true
     - get: platform-automation-tasks
       params:
         unpack: true
-    - get: configuration-repo
-      trigger: true
-      passed:
-      - configure-pks
     - get: terraform-infra
       passed:
       - configure-pks
       params:
         output_statefile: true
-    - get: one-time-trigger
+    - get: configuration-repo
+      trigger: true
+      passed:
+      - configure-pks
+    - get: tasks-repo
+      trigger: true
+      passed:
+      - configure-pks
+    - get: pks-product
+      trigger: true
+      passed:
+      - configure-pks
+    - get: pks-stemcell
+      trigger: true
+      passed:
+      - configure-pks
+    - get: opsman-product
       trigger: true
       passed:
       - configure-pks
