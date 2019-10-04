@@ -26,7 +26,7 @@ interpolate-creds: &interpolate-creds
     image: platform-automation-image
     file: platform-automation-tasks/tasks/credhub-interpolate.yml
     params:
-      CREDHUB_CLIENT: credhub_admin
+      CREDHUB_CLIENT: ((credhub-client))
       CREDHUB_SECRET: ((credhub-secret))
       CREDHUB_SERVER: ((credhub-server))
       CREDHUB_CA_CERT: ((credhub-ca-cert))
