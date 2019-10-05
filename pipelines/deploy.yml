@@ -20,8 +20,6 @@ interpolate-creds: &interpolate-creds
       files: configuration-repo
     output_mapping:
       interpolated-files: interpolated-tf-files
-    params:
-      INTERPOLATION_PATHS: config/
   - task: credhub-interpolate
     image: platform-automation-image
     file: platform-automation-tasks/tasks/credhub-interpolate.yml
@@ -188,6 +186,8 @@ jobs:
   - install
   plan:
   - in_parallel:
+    - get: one-time-trigger
+      trigger: true
     - get: terraforming-azure-tarball
     - get: platform-automation-image
       params:
@@ -233,6 +233,8 @@ jobs:
   - in_parallel:
     - get: one-time-trigger
       trigger: true
+      passed:
+      - terraform-infra
     - get: platform-automation-image
       params:
         unpack: true
@@ -356,6 +358,8 @@ jobs:
       passed:
       - export-installation
     - get: opsman-state
+      passed:
+      - export-installation
     - get: opsman-product
       trigger: true
       passed:
@@ -368,6 +372,7 @@ jobs:
       image: opsman-product
       config: interpolated-files
       env: interpolated-files
+      state: opsman-state
     params:
       STATE_FILE: state-pks-$timestamp.yml
       INSTALLATION_FILE: pks-installation*.zip
