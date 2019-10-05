@@ -48,7 +48,7 @@ Ensure the following parameters are made available to the pipeline.
 
 |credential|value|
 |-|-|
-|client_id|`az ad app list --identifier-uri "<your app uri>" | jq -r '.[].appId'`|
+|client_id|`az ad app list --identifier-uri "<your app uri>" \| jq -r '.[].appId'`|
 |client_secret|The password of your app|
 |configuration-branch|Branch of this repo to listen to|
 |credhub-ca-cert|CA certificate of your credhub|
@@ -62,8 +62,8 @@ Ensure the following parameters are made available to the pipeline.
 |resource_group|Name of Azure resource group for this foundation|
 |storage_account_key|Key for your Azure storage account|
 |storage_account_name|Name of your Azure storage account|
-|subscription_id|`az account show | jq -r '.id'`|
-|tenant_id|`az account show | jq -r '.tenantId'`|
+|subscription_id|`az account show \| jq -r '.id'`|
+|tenant_id|`az account show \| jq -r '.tenantId'`|
 
 For interpolation into config files ensure the following parameters are set in credhub on the path `<your resource group from above>/<parameter>`
 
