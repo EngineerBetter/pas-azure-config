@@ -58,9 +58,9 @@ groups:
   - apply-product-changes
 - name: destroy
   jobs:
-  - delete-installation
-  - delete-opsman
-  - terraform-destroy
+  - 1-delete-installation
+  - 2-delete-opsman
+  - 3-terraform-destroy
 
 resource_types:
 - name: azure-blobstore
@@ -543,7 +543,7 @@ jobs:
     input_mapping:
       env: interpolated-files
 
-- name: delete-installation
+- name: 1-delete-installation
   serial: true
   serial_groups:
   - install
@@ -569,7 +569,7 @@ jobs:
     input_mapping:
       env: interpolated-files
 
-- name: delete-opsman
+- name: 2-delete-opsman
   serial: true
   serial_groups:
   - install
@@ -603,7 +603,7 @@ jobs:
       STATE_FILE: state-pks-$timestamp.yml
     ensure: *put-state
 
-- name: terraform-destroy
+- name: 3-terraform-destroy
   serial: true
   serial_groups:
   - install
