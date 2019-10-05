@@ -46,6 +46,22 @@ put-state: &put-state
     params:
       file: generated-state/state-pks-*.yml
 
+groups:
+- name: deploy
+  jobs:
+  - terraform-infra
+  - install-opsman
+  - export-installation
+  - upgrade-opsman
+  - upload-and-stage-pks
+  - configure-pks
+  - apply-product-changes
+- name: destroy
+  jobs:
+  - delete-installation
+  - delete-opsman
+  - terraform-destroy
+
 resource_types:
 - name: azure-blobstore
   type: docker-image
@@ -194,36 +210,25 @@ jobs:
         unpack: true
     - get: configuration-repo
       trigger: true
+    - get: tasks-repo
+      trigger: true
   - task: extract-tf-files
     image: platform-automation-image
-    config:
-      platform: linux
-      inputs:
-      - name: terraforming-azure-tarball
-      - name: configuration-repo
-      outputs:
-      - name: terraforming-azure
-      run:
-        path: bash
-        args:
-        - -euc
-        - |
-          version=$(cat terraforming-azure-tarball/version)
-          tar xzf terraforming-azure-tarball/"terraforming-azure-v${version}.tar.gz" -C terraforming-azure
-          cp configuration-repo/terraform/* terraforming-azure/terraforming/terraforming-pks/
+    file: tasks-repo/tasks/extract-tf-files/task.yml
   - put: terraform-infra
     params:
       terraform_source: terraforming-azure/terraforming/terraforming-pks
       vars:
-        subscription_id: ((subscription_id))
-        tenant_id: ((tenant_id))
-        client_id: ((client_id))
-        client_secret: ((client_secret))
-        env_name: ((resource_group))
-        location: ((location))
-        dns_suffix: ((dns_suffix))
-        domains: ["*.((resource_group)).((dns_suffix))"]
-        ops_manager_image_uri: ""
+        <<: &tf-vars
+          subscription_id: ((subscription_id))
+          tenant_id: ((tenant_id))
+          client_id: ((client_id))
+          client_secret: ((client_secret))
+          env_name: ((resource_group))
+          location: ((location))
+          dns_suffix: ((dns_suffix))
+          domains: ["*.((resource_group)).((dns_suffix))"]
+          ops_manager_image_uri: ""
 
 - name: install-opsman
   serial: true
@@ -259,6 +264,7 @@ jobs:
     input_mapping:
       image: opsman-product
       config: interpolated-files
+      state: opsman-state
     params:
       STATE_FILE: state-pks-$timestamp.yml
     ensure: *put-state
@@ -536,3 +542,87 @@ jobs:
     file: platform-automation-tasks/tasks/apply-changes.yml
     input_mapping:
       env: interpolated-files
+
+- name: delete-installation
+  serial: true
+  serial_groups:
+  - install
+  plan:
+  - in_parallel:
+    - get: platform-automation-image
+      params:
+        unpack: true
+    - get: platform-automation-tasks
+      params:
+        unpack: true
+    - get: terraform-infra
+      params:
+        output_statefile: true
+    - get: configuration-repo
+      passed:
+      - terraform-infra
+    - get: tasks-repo
+  - <<: *interpolate-creds
+  - task: delete-installation
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/delete-installation.yml
+    input_mapping:
+      env: interpolated-files
+
+- name: delete-opsman
+  serial: true
+  serial_groups:
+  - install
+  plan:
+  - in_parallel:
+    - get: platform-automation-image
+      params:
+        unpack: true
+    - get: platform-automation-tasks
+      params:
+        unpack: true
+    - get: terraform-infra
+      passed:
+      - terraform-infra
+      params:
+        output_statefile: true
+    - get: configuration-repo
+      passed:
+      - terraform-infra
+    - get: tasks-repo
+    - get: opsman-state
+  - <<: *interpolate-creds
+  - task: delete-vm
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/delete-vm.yml
+    input_mapping:
+      image: opsman-product
+      config: interpolated-files
+      state: opsman-state
+    params:
+      STATE_FILE: state-pks-$timestamp.yml
+    ensure: *put-state
+
+- name: terraform-destroy
+  serial: true
+  serial_groups:
+  - install
+  plan:
+  - in_parallel:
+    - get: terraforming-azure-tarball
+    - get: platform-automation-image
+      params:
+        unpack: true
+    - get: configuration-repo
+    - get: tasks-repo
+  - task: extract-tf-files
+    image: platform-automation-image
+    file: tasks-repo/tasks/extract-tf-files/task.yml
+  - put: terraform-infra
+    params:
+      action: destroy
+      get_params:
+        action: destroy
+      terraform_source: terraforming-azure/terraforming/terraforming-pks
+      vars:
+        <<: *tf-vars

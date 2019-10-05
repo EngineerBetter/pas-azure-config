@@ -55,7 +55,7 @@ Ensure the following parameters are made available to the pipeline.
 |credhub-client|Client configured with `credhub.read` and `credhub.write` in UAA|
 |credhub-secret|Client secret of `credhub-client`|
 |credhub-server|The URL of your credhub|
-|dns_suffix|DNS suffix to use for this foundation|
+|dns_suffix|DNS suffix to use for this foundation (your Ops Manager will be on `pcf.$dns_suffix`)|
 |github_access_token|GitHub Token to avoid rate limiting|
 |github_private_key|Private key for your git repo(s)|
 |location|Azure location to deploy into|
