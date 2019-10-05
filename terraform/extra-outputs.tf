@@ -19,5 +19,5 @@ output "dns_suffix" {
 }
 
 output "env_name" {
-  value = "${env_name}"
+  value = "${var.env_name}"
 }
