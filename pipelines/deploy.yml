@@ -220,15 +220,16 @@ jobs:
       terraform_source: terraforming-azure/terraforming/terraforming-pks
       vars:
         <<: &tf-vars
-          subscription_id: ((subscription_id))
-          tenant_id: ((tenant_id))
           client_id: ((client_id))
           client_secret: ((client_secret))
-          env_name: ((resource_group))
-          location: ((location))
           dns_suffix: ((dns_suffix))
           domains: ["*.((resource_group)).((dns_suffix))"]
+          env_name: ((resource_group))
+          location: ((location))
           ops_manager_image_uri: ""
+          parent_dns_rg: ((parent_dns_rg))
+          subscription_id: ((subscription_id))
+          tenant_id: ((tenant_id))
 
 - name: install-opsman
   serial: true

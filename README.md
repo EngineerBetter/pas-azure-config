@@ -34,6 +34,8 @@ docker run -it --rm platform-automation-image om ....
 
 These have nothing to do with Platform Automation.
 
+`add-dns.tf` links the DNS zone created by terraforming-azure to the one for <dns_suffix> by adding the appropriate NS record.
+
 `extra-outputs.tf` defines some extra things I want to be able to `tfstate-interpolate` in my pipeline.
 
 `self-signed-cert.tf` makes terraform create and manage some self-signed certs for use in PKS.
@@ -59,6 +61,7 @@ Ensure the following parameters are made available to the pipeline.
 |github_access_token|GitHub Token to avoid rate limiting|
 |github_private_key|Private key for your git repo(s)|
 |location|Azure location to deploy into|
+|parent_dns_rg|The resource group of the Azure DNS zone <dns_suffix>|
 |resource_group|Name of Azure resource group for this foundation|
 |storage_account_key|Key for your Azure storage account|
 |storage_account_name|Name of your Azure storage account|
