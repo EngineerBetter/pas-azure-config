@@ -11,5 +11,5 @@ resource "azurerm_dns_ns_record" "pks_ns_record" {
   resource_group_name = "${var.parent_dns_rg}"
   ttl                 = 300
 
-  records = "${module.infra.dns_zone_name_servers}"
+  records = ["${module.infra.dns_zone_name_servers}"]
 }
