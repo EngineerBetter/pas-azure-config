@@ -25,7 +25,3 @@ output "env_name" {
 output "pks_lb_name" {
   value = "${module.pks.pks_lb_name}"
 }
-
-output "pks_ip" {
-  value = "${module.pks.pks_lb_ip}"
-}
