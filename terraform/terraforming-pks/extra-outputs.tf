@@ -23,5 +23,5 @@ output "env_name" {
 }
 
 output "pks_lb_name" {
-  value = "${module.pks.pks-lb-name}"
+  value = "${module.pks.pks_lb_name}"
 }
