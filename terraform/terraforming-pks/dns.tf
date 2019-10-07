@@ -19,5 +19,5 @@ resource "azurerm_dns_a_record" "pks_api" {
   zone_name           = "${module.infra.dns_zone_name}"
   resource_group_name = "${module.infra.resource_group_name}"
   ttl                 = 300
-  records             = ["${module.pks.pks_lb_ips}"]
+  records             = ["${module.pks.pks_lb_ip}"]
 }
