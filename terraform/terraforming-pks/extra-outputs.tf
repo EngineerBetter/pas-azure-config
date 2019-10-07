@@ -21,3 +21,7 @@ output "dns_suffix" {
 output "env_name" {
   value = "${var.env_name}"
 }
+
+output "pks-lb-id" {
+  value = "${module.pks.pks-lb-id}"
+}
