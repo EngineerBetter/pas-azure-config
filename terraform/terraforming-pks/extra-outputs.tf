@@ -22,6 +22,6 @@ output "env_name" {
   value = "${var.env_name}"
 }
 
-output "pks-lb-name" {
+output "pks_lb_name" {
   value = "${module.pks.pks-lb-name}"
 }
