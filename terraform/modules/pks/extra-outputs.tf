@@ -3,5 +3,5 @@ output "pks_lb_name" {
 }
 
 output "pks_lb_ip" {
-  value = "${azurerm_lb.pks-lb.private_ip_address}"
+  value = "${azurerm_public_ip.pks-lb-ip.ip_address}"
 }
