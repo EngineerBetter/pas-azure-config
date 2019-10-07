@@ -1,3 +1,3 @@
-output "pks-lb-id" {
-  value = "${azurerm_lb.pks-lb.id}"
+output "pks-lb-name" {
+  value = "${var.env_id}-pks-lb"
 }
