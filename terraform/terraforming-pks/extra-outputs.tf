@@ -26,6 +26,6 @@ output "pks_lb_name" {
   value = "${module.pks.pks_lb_name}"
 }
 
-output "pks_ips" {
-  value = "${module.pks.pks_lb_ips}"
+output "pks_ip" {
+  value = "${module.pks.pks_lb_ip}"
 }
