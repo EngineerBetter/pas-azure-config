@@ -21,7 +21,3 @@ output "dns_suffix" {
 output "env_name" {
   value = "${var.env_name}"
 }
-
-output "pas_lb_name" {
-  value = "${module.pas.pas_lb_name}"
-}
