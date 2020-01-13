@@ -16,9 +16,6 @@ product-properties:
     value: 10240
   .cloud_controller.enable_custom_buildpacks:
     value: true
-  .cloud_controller.encrypt_key:
-    value:
-      secret: ((cloud_controller_encrypt_key.secret))
   .cloud_controller.max_disk_quota_app:
     value: 2048
   .cloud_controller.max_file_size:
@@ -349,9 +346,6 @@ product-properties:
 {{indent 8 .tls_cert}}
       private_key_pem: |
 {{indent 8 .tls_private_key}}
-  .uaa.service_provider_key_password:
-    value:
-      secret: ((uaa_service_provider_key_password.secret))
 network-properties:
   network:
     name: pas
