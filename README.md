@@ -1,8 +1,8 @@
-# PKS Azure Config
+# PAS Azure Config
 
-An example of using [Platform Automation](https://docs.pivotal.io/platform-automation/v4.0/) to deploy [PKS](https://pivotal.io/platform/pivotal-container-service) on Microsoft Azure.
+An example of using [Platform Automation](https://docs.pivotal.io/platform-automation/v4.2/) to deploy [PAS](https://pivotal.io/platform/pivotal-application-service) on Microsoft Azure.
 
-This repo contains foundation-specific files where the intention is that they will be "promoted" up through different environments. Non-foundation-specific files can be found in [pks-azure](https://github.com/crsimmons/pks-azure).
+This repo contains foundation-specific files where the intention is that they will be "promoted" up through different environments. Non-foundation-specific files can be found in [pas-azure](https://github.com/EngineerBetter/pas-azure).
 
 The intention is that once a an environment has been successfully deployed by `pipelines/deploy.yml` that all the config on the current branch is "promoted" up to a different branch which another pipeline is listening to.
 
@@ -12,15 +12,15 @@ The yaml file in the root of this repo are the various configuration files Platf
 
 |file|description|
 |-|-|
-|`auth.yml`|[For configuring ops manager authentication](https://docs.pivotal.io/platform-automation/v4.0/tasks.html#configure-authentication)|
-|`director.yml`|[Configuration for the director tile](https://docs.pivotal.io/platform-automation/v4.0/inputs-outputs.html#director-config)|
-|`env.yml`|[Credentials used by `om` to run authenticated commands](https://docs.pivotal.io/platform-automation/v4.0/inputs-outputs.html#env)|
-|`opsman.yml`|[Configuration for the Ops Manager](https://docs.pivotal.io/platform-automation/v4.0/inputs-outputs.html#azure)|
-|`pks.yml`|[Configuration for the PKS tile](https://docs.pivotal.io/platform-automation/v4.0/inputs-outputs.html#product-config)|
+|`auth.yml`|[For configuring ops manager authentication](https://docs.pivotal.io/platform-automation/v4.2/tasks.html#configure-authentication)|
+|`director.yml`|[Configuration for the director tile](https://docs.pivotal.io/platform-automation/v4.2/inputs-outputs.html#director-config)|
+|`env.yml`|[Credentials used by `om` to run authenticated commands](https://docs.pivotal.io/platform-automation/v4.2/inputs-outputs.html#env)|
+|`opsman.yml`|[Configuration for the Ops Manager](https://docs.pivotal.io/platform-automation/v4.2/inputs-outputs.html#azure)|
+|`pas.yml`|[Configuration for the pas tile](https://docs.pivotal.io/platform-automation/v4.2/inputs-outputs.html#product-config)|
 
 ### _Note on generating config files_
 
-Generally a good shortcut for generating files like `director.yml` and `pks.yml` is to confgure them manually in the Ops Manager UI then use `om staged-director-config` or `om staged-config` to generate the yaml files. This still works with Platform Automation but keep in mind that the latest version of the Platform Automation image at time of writing (4.0.3) contains `om` version 3.1.0 while the latest `om` is 4.1.0.
+Generally a good shortcut for generating files like `director.yml` and `pas.yml` is to confgure them manually in the Ops Manager UI then use `om staged-director-config` or `om staged-config` to generate the yaml files. This still works with Platform Automation but keep in mind that the latest version of the Platform Automation image at time of writing (4.0.3) contains `om` version 3.1.0 while the latest `om` is 4.1.0.
 
 If the `om` used for generating differs from the version used in the tasks then [weird issues can occur](https://github.com/pivotal-cf/om/issues/377).
 
@@ -38,11 +38,11 @@ These have nothing to do with Platform Automation.
 
 `extra-outputs.tf` defines some extra things I want to be able to `tfstate-interpolate` in my pipeline.
 
-`self-signed-cert.tf` makes terraform create and manage some self-signed certs for use in PKS.
+`self-signed-cert.tf` makes terraform create and manage some self-signed certs for use in pas.
 
 ## Deploy pipeline
 
-Follow the [Pivotal docs](https://docs.pivotal.io/pivotalcf/2-6/om/azure/prepare-env-manual.html) to create an Azure Active Directory Application.
+Follow the [Pivotal docs](https://docs.pivotal.io/pivotalcf/2-8/om/azure/prepare-env-manual.html) to create an Azure Active Directory Application.
 
 Note that Step 4, part 2 is incorrect. Your Service Princial requires "Owner" not "Contributor".
 
