@@ -44,7 +44,7 @@ put-state: &put-state
   do:
   - put: opsman-state
     params:
-      file: generated-state/state-pks-*.yml
+      file: generated-state/state-pas-*.yml
 
 groups:
 - name: deploy
@@ -53,8 +53,8 @@ groups:
   - install-opsman
   - export-installation
   - upgrade-opsman
-  - upload-and-stage-pks
-  - configure-pks
+  - upload-and-stage-pas
+  - configure-pas
   - apply-product-changes
 - name: destroy
   jobs:
@@ -86,14 +86,14 @@ resources:
   type: git
   source:
     private_key: ((github_private_key))
-    uri: git@github.com:crsimmons/pks-azure-config.git
+    uri: git@github.com:EngineerBetter/pas-azure-config.git
     branch: ((configuration-branch))
 
 - name: tasks-repo
   type: git
   source:
     private_key: ((github_private_key))
-    uri: git@github.com:crsimmons/pks-azure.git
+    uri: git@github.com:EngineerBetter/pas-azure.git
     branch: master
     paths:
     - tasks
@@ -125,7 +125,7 @@ resources:
 - name: terraform-infra
   type: terraform
   source:
-    env_name: pks
+    env_name: pas
     backend_type: azurerm
     backend_config:
       storage_account_name: ((storage_account_name))
@@ -140,7 +140,7 @@ resources:
     storage_account_name: ((storage_account_name))
     storage_account_key: ((storage_account_key))
     container: resources
-    regexp: pks-installation-(.*).zip
+    regexp: pas-installation-(.*).zip
 
 - name: opsman-state
   type: azure-blobstore
@@ -148,7 +148,7 @@ resources:
     storage_account_name: ((storage_account_name))
     storage_account_key: ((storage_account_key))
     container: resources
-    regexp: state-pks-(.*).yml
+    regexp: state-pas-(.*).yml
 
 # Azure blobstore blobs
 - name: platform-automation-tasks
@@ -172,17 +172,17 @@ resources:
     <<: *azure-params
     regexp: ops-manager-azure-(.*).yml
 
-- name: pks-product
+- name: pas-product
   type: azure-blobstore
   source:
     <<: *azure-params
     regexp: pivotal-container-service-(.*).pivotal
 
-- name: pks-stemcell
+- name: pas-stemcell
   type: azure-blobstore
   source:
     <<: *azure-params
-    regexp: pks-stemcells/bosh-stemcell-(.*)-azure-hyperv-ubuntu-xenial-go_agent.tgz
+    regexp: pas-stemcells/bosh-stemcell-(.*)-azure-hyperv-ubuntu-xenial-go_agent.tgz
 
 # Triggers
 - name: one-time-trigger
@@ -217,7 +217,7 @@ jobs:
     file: tasks-repo/tasks/extract-tf-files/task.yml
   - put: terraform-infra
     params:
-      terraform_source: terraforming-azure/terraforming/terraforming-pks
+      terraform_source: terraforming-azure/terraforming/terraforming-pas
       vars:
         <<: &tf-vars
           client_id: ((client_id))
@@ -267,7 +267,7 @@ jobs:
       config: interpolated-files
       state: opsman-state
     params:
-      STATE_FILE: state-pks-$timestamp.yml
+      STATE_FILE: state-pas-$timestamp.yml
     ensure: *put-state
   - task: configure-authentication
     image: platform-automation-image
@@ -327,10 +327,10 @@ jobs:
     input_mapping:
       env: interpolated-files
     params:
-      INSTALLATION_FILE: pks-installation-$timestamp.zip
+      INSTALLATION_FILE: pas-installation-$timestamp.zip
   - put: installation
     params:
-      file: installation/pks-installation*.zip
+      file: installation/pas-installation*.zip
 
 - name: upgrade-opsman
   serial: true
@@ -381,8 +381,8 @@ jobs:
       env: interpolated-files
       state: opsman-state
     params:
-      STATE_FILE: state-pks-$timestamp.yml
-      INSTALLATION_FILE: pks-installation*.zip
+      STATE_FILE: state-pas-$timestamp.yml
+      INSTALLATION_FILE: pas-installation*.zip
     ensure: *put-state
   - task: configure-director
     image: platform-automation-image
@@ -396,7 +396,7 @@ jobs:
     input_mapping:
       env: interpolated-files
 
-- name: upload-and-stage-pks
+- name: upload-and-stage-pas
   serial: true
   serial_groups:
   - install
@@ -425,9 +425,9 @@ jobs:
       trigger: true
       passed:
       - upgrade-opsman
-    - get: pks-product
+    - get: pas-product
       trigger: true
-    - get: pks-stemcell
+    - get: pas-stemcell
       trigger: true
     - get: opsman-product
       trigger: true
@@ -438,16 +438,16 @@ jobs:
     image: platform-automation-image
     file: platform-automation-tasks/tasks/upload-and-stage-product.yml
     input_mapping:
-      product: pks-product
+      product: pas-product
       env: interpolated-files
-  - task: upload-pks-stemcell
+  - task: upload-pas-stemcell
     image: platform-automation-image
     file: platform-automation-tasks/tasks/upload-stemcell.yml
     input_mapping:
       env: interpolated-files
-      stemcell: pks-stemcell
+      stemcell: pas-stemcell
 
-- name: configure-pks
+- name: configure-pas
   serial: true
   serial_groups:
   - install
@@ -456,7 +456,7 @@ jobs:
     - get: one-time-trigger
       trigger: true
       passed:
-      - upload-and-stage-pks
+      - upload-and-stage-pas
     - get: platform-automation-image
       params:
         unpack: true
@@ -465,38 +465,38 @@ jobs:
         unpack: true
     - get: terraform-infra
       passed:
-      - upload-and-stage-pks
+      - upload-and-stage-pas
       params:
         output_statefile: true
     - get: configuration-repo
       trigger: true
       passed:
-      - upload-and-stage-pks
+      - upload-and-stage-pas
     - get: tasks-repo
       trigger: true
       passed:
-      - upload-and-stage-pks
-    - get: pks-product
+      - upload-and-stage-pas
+    - get: pas-product
       trigger: true
       passed:
-      - upload-and-stage-pks
-    - get: pks-stemcell
+      - upload-and-stage-pas
+    - get: pas-stemcell
       trigger: true
       passed:
-      - upload-and-stage-pks
+      - upload-and-stage-pas
     - get: opsman-product
       trigger: true
       passed:
-      - upload-and-stage-pks
+      - upload-and-stage-pas
   - <<: *interpolate-creds
-  - task: configure-pks
+  - task: configure-pas
     image: platform-automation-image
     file: platform-automation-tasks/tasks/configure-product.yml
     input_mapping:
       config: interpolated-files
       env: interpolated-files
     params:
-      CONFIG_FILE: pks.yml
+      CONFIG_FILE: pas.yml
 
 - name: apply-product-changes
   serial: true
@@ -507,7 +507,7 @@ jobs:
     - get: one-time-trigger
       trigger: true
       passed:
-      - configure-pks
+      - configure-pas
     - get: platform-automation-image
       params:
         unpack: true
@@ -516,29 +516,29 @@ jobs:
         unpack: true
     - get: terraform-infra
       passed:
-      - configure-pks
+      - configure-pas
       params:
         output_statefile: true
     - get: configuration-repo
       trigger: true
       passed:
-      - configure-pks
+      - configure-pas
     - get: tasks-repo
       trigger: true
       passed:
-      - configure-pks
-    - get: pks-product
+      - configure-pas
+    - get: pas-product
       trigger: true
       passed:
-      - configure-pks
-    - get: pks-stemcell
+      - configure-pas
+    - get: pas-stemcell
       trigger: true
       passed:
-      - configure-pks
+      - configure-pas
     - get: opsman-product
       trigger: true
       passed:
-      - configure-pks
+      - configure-pas
   - <<: *interpolate-creds
   - task: apply-product-changes
     image: platform-automation-image
@@ -603,7 +603,7 @@ jobs:
       config: interpolated-files
       state: opsman-state
     params:
-      STATE_FILE: state-pks-$timestamp.yml
+      STATE_FILE: state-pas-$timestamp.yml
     ensure: *put-state
 
 - name: 3-terraform-destroy
@@ -626,6 +626,6 @@ jobs:
       action: destroy
       get_params:
         action: destroy
-      terraform_source: terraforming-azure/terraforming/terraforming-pks
+      terraform_source: terraforming-azure/terraforming/terraforming-pas
       vars:
         <<: *tf-vars
