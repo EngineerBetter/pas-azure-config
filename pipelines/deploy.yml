@@ -176,7 +176,7 @@ resources:
   type: azure-blobstore
   source:
     <<: *azure-params
-    regexp: pivotal-container-service-(.*).pivotal
+    regexp: cf-(.*).pivotal
 
 - name: pas-stemcell
   type: azure-blobstore
@@ -223,7 +223,12 @@ jobs:
           client_id: ((client_id))
           client_secret: ((client_secret))
           dns_suffix: ((dns_suffix))
-          domains: ["*.((resource_group)).((dns_suffix))"]
+          domains:
+          - "*.((resource_group)).((dns_suffix))"
+          - "*.apps.((resource_group)).((dns_suffix))"
+          - "*.sys.((resource_group)).((dns_suffix))"
+          - "*.login.sys.((resource_group)).((dns_suffix))"
+          - "*.uaa.sys.((resource_group)).((dns_suffix))"
           env_name: ((resource_group))
           location: ((location))
           ops_manager_image_uri: ""
