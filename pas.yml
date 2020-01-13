@@ -118,8 +118,9 @@ product-properties:
       private_key_pem: |
 {{indent 8 .tls_private_key}}
   .properties.credhub_internal_provider_keys:
-  - name: credhub-key
-    secret: ((credhub_internal_provider_secret_key))
+    value:
+    - name: credhub-key
+      secret: ((credhub_internal_provider_secret_key))
   .properties.diego_database_max_open_connections:
     value: 100
   .properties.diego_log_timestamp_format:
