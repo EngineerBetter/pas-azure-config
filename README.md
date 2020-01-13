@@ -18,18 +18,6 @@ The yaml file in the root of this repo are the various configuration files Platf
 |`opsman.yml`|[Configuration for the Ops Manager](https://docs.pivotal.io/platform-automation/v4.2/inputs-outputs.html#azure)|
 |`pas.yml`|[Configuration for the pas tile](https://docs.pivotal.io/platform-automation/v4.2/inputs-outputs.html#product-config)|
 
-### _Note on generating config files_
-
-Generally a good shortcut for generating files like `director.yml` and `pas.yml` is to confgure them manually in the Ops Manager UI then use `om staged-director-config` or `om staged-config` to generate the yaml files. This still works with Platform Automation but keep in mind that the latest version of the Platform Automation image at time of writing (4.0.3) contains `om` version 3.1.0 while the latest `om` is 4.1.0.
-
-If the `om` used for generating differs from the version used in the tasks then [weird issues can occur](https://github.com/pivotal-cf/om/issues/377).
-
-One way around this is to use the image to run `om`:
-
-```sh
-docker run -it --rm platform-automation-image om ....
-```
-
 ## Extra terraform
 
 These have nothing to do with Platform Automation.
