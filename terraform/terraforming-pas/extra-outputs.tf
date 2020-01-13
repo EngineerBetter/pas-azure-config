@@ -3,11 +3,11 @@ output "infrastructure_subnet_reserved" {
 }
 
 output "services_subnet_reserved" {
-  value = "${cidrhost(module.pks.services_subnet_cidr, 1)}-${cidrhost(module.pks.services_subnet_cidr, 9)}"
+  value = "${cidrhost(module.pas.services_subnet_cidr, 1)}-${cidrhost(module.pas.services_subnet_cidr, 9)}"
 }
 
-output "pks_subnet_reserved" {
-  value = "${cidrhost(module.pks.pks_subnet_cidr, 1)}-${cidrhost(module.pks.pks_subnet_cidr, 9)}"
+output "pas_subnet_reserved" {
+  value = "${cidrhost(module.pas.pas_subnet_cidr, 1)}-${cidrhost(module.pas.pas_subnet_cidr, 9)}"
 }
 
 output "location" {
@@ -22,6 +22,6 @@ output "env_name" {
   value = "${var.env_name}"
 }
 
-output "pks_lb_name" {
-  value = "${module.pks.pks_lb_name}"
+output "pas_lb_name" {
+  value = "${module.pas.pas_lb_name}"
 }
