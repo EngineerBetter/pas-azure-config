@@ -28,13 +28,13 @@ networks-configuration:
       - zone-1
       - zone-2
       - zone-3
-  - name: pks
+  - name: pas
     subnets:
-    - iaas_identifier: {{.network_name}}/{{.pks_subnet_name}}
-      cidr: {{.pks_subnet_cidr}}
+    - iaas_identifier: {{.network_name}}/{{.pas_subnet_name}}
+      cidr: {{.pas_subnet_cidr}}
       dns: 168.63.129.16
-      gateway: {{.pks_subnet_gateway}}
-      reserved_ip_ranges: {{.pks_subnet_reserved}}
+      gateway: {{.pas_subnet_gateway}}
+      reserved_ip_ranges: {{.pas_subnet_reserved}}
       availability_zone_names:
       - zone-1
       - zone-2
