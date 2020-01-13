@@ -74,3 +74,4 @@ For interpolation into config files ensure the following parameters are set in c
 |-|-|
 |opsman_password|password for your ops manager|
 |opsman_decryption_passphrase|decryption passphrase for your ops manager|
+|credhub_internal_provider_secret_key|key used to encrypt all data in credhub (must be at least 20 characters)|
